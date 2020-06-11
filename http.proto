@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "io.http";
+option java_outer_classname = "HttpProto";
+option objc_class_prefix = "HLW";
+
+package httpproto;
+
+service HttpWorker {
+  rpc ExecuteHttp (WorkerHttpRequest) returns (WorkerHttpReply) {}
+}
+
+message WorkerHttpRequest {
+  string url = 1;
+  string payload = 2;
+  string method = 3;
+  string headers = 4;
+}
+
+message WorkerHttpReply {
+  string output = 1;
+  string status = 2;
+}
