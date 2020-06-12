@@ -12,10 +12,8 @@ service HttpWorker {
 }
 
 message WorkerHttpRequest {
-  string url = 1;
-  string payload = 2;
-  string method = 3;
-  string headers = 4;
+  string requestOptions = 1;
+  string httpPayload = 2;
 }
 
 message WorkerHttpReply {

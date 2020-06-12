@@ -1,9 +1,6 @@
-var http = require("http");
+var http = require("https");
 
-var options = {
-    host: 'www.google.com',
-    method: 'GET'
-};
+let options = {protocol: 'https:', host: 'httpbin.org', path: '/post', method: 'POST'}
 
 var req = http.request(options, function(res) {
     console.log('STATUS: ' + res.statusCode);
@@ -14,4 +11,8 @@ var req = http.request(options, function(res) {
     });
 });
 
+req.on("error", console.log)
+
+req.write('123 aaaaa', 'ascii', err =>
+{console.log('nastala chyba ', err)});
 req.end();
