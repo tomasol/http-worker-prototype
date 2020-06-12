@@ -55,18 +55,19 @@ let HttpResponseHandler = grpcCallback => {
     }
 }
 
+let pickLibrary = protocol => 'https:' === protocol ? https : http;
 
 function executeHttp(workerHttpRequest, grpcCallback) {
     // prepare request from the data from GRPc call
     const options = JSON.parse(workerHttpRequest.request.requestOptions);
-    const req = https.request(options, HttpResponseHandler(grpcCallback));
+    const req = pickLibrary(options.protocol).request(options, HttpResponseHandler(grpcCallback));
 
     req.on('error', (e) => {
         //TODO log
         grpcCallback(null, createGrpcResponse('FAILED'));
     });
 
-    // use its "timeout" event to abort the request
+    // when socket times out we need to abort manually ..
     req.on('timeout', () => {
         //TODO log
         req.abort();
