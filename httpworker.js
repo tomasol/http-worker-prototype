@@ -3,6 +3,20 @@ const grpc = require('grpc');
 const protoLoader = require('@grpc/proto-loader');
 const http = require('http');
 const https = require('https');
+const winston = require('winston');
+
+const completed = 'COMPLETED';
+const failed = 'FAILED';
+
+const logger = winston.createLogger({
+    level: 'debug',
+    format: winston.format.simple(),
+    defaultMeta: { service: 'http-worker' },
+    transports: [
+        new winston.transports.File({ filename: 'httpworker_error.log', level: 'error' }),
+        new winston.transports.File({ filename: 'httpworker.log' }),
+    ],
+});
 
 const packageDefinition = protoLoader.loadSync(
     PROTO_PATH,
@@ -49,9 +63,9 @@ let HttpResponseHandler = grpcCallback => {
            if (chunk) {
                chunks.push(Buffer.from(chunk, responseEncoding));
            }
-           grpcCallback(null, createGrpcResponse('COMPLETED', Buffer.concat(chunks).toString(responseEncoding)))
+           grpcCallback(null, createGrpcResponse(completed, Buffer.concat(chunks).toString(responseEncoding)))
        });
-       res.on('aborted', _ => grpcCallback(null, createGrpcResponse('FAILED')));
+        res.on('aborted', _ => grpcCallback(null, createGrpcResponse(failed)));
     }
 }
 
@@ -63,23 +77,23 @@ function executeHttp(workerHttpRequest, grpcCallback) {
     const req = pickLibrary(options.protocol).request(options, HttpResponseHandler(grpcCallback));
 
     req.on('error', (e) => {
-        //TODO log
+        logger.error('Error occured while doing a HTTP request: ', e);
         grpcCallback(null, createGrpcResponse('FAILED'));
     });
 
     // when socket times out we need to abort manually ..
     req.on('timeout', () => {
-        //TODO log
+        logger.error('Timeout occured while doing a HTTP request, aborting request');
         req.abort();
     });
 
     req.on('abort', () => {
-        //TODO log
-        grpcCallback(null, createGrpcResponse('FAILED'));
+        logger.error('The request was aborted');
+        grpcCallback(null, createGrpcResponse(failed));
     });
 
     req.on('response', () => {
-        //TODO log
+        logger.verbose('The HTTP response was received');
     });
 
     //write POST or PUT content

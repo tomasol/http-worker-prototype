@@ -1,6 +1,16 @@
 const ConductorClient = require('conductor-client').default
 const {doHttpRequest} = require('./httpclient2');
+const winston = require('winston');
 
+const logger = winston.createLogger({
+    level: 'debug',
+    format: winston.format.simple(),
+    defaultMeta: { service: 'conductor-poller' },
+    transports: [
+        new winston.transports.File({ filename: 'conductor_poller_error.log', level: 'error' }),
+        new winston.transports.File({ filename: 'conductor_poller.log' }),
+    ],
+});
 const conductorClient = new ConductorClient({
     baseURL: 'http://localhost:8080/api'
 })
@@ -22,8 +32,7 @@ let registerHttpWorker = () => conductorClient.registerWatcher(
     httpTaskDef.name,
     async (data, updater) => {
         try {
-            console.log('conductorClient.registerWatcher')
-            console.log(data.taskType, data.inputData)
+            logger.verbose('Received task data type: ', data.taskType, ' data: ', data.inputData)
 
             //TODO do we need in progress??
             await updater.inprogress({
@@ -45,7 +54,8 @@ let registerHttpWorker = () => conductorClient.registerWatcher(
             } )
 
         } catch (error) {
-            console.log(error); //TODO error handling
+            logger.error('Unable to do HTTP request ', error);
+            //TODO error handling ?
         }
     },
     { pollingIntervals: 1000, autoAck: true, maxRunner: 1 },
