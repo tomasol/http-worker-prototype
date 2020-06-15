@@ -15,35 +15,40 @@ const workflowDefs = [
                 name: httpTaskDef.name,
                 taskReferenceName: httpTaskDef.name,
                 inputParameters: {
-                    http_options: '${workflow.input.http_options}',
-                    http_body_data: '${workflow.input.http_body_data}'
+                    body: '${workflow.input.body}',
+                    uri: '${workflow.input.uri}',
+                    method: '${workflow.input.method}',
+                    timeout: '${workflow.input.timeout}',
+                    verifyCertificate: '${workflow.input.verifyCertificate}',
+                    headers: '${workflow.input.headers}',
+                    basicAuth: '${workflow.input.basicAuth}',
+                    contentType: '${workflow.input.contentType}',
+                    cookies: '${workflow.input.cookies}'
                 },
                 type: 'SIMPLE',
                 startDelay: 0,
                 optional: false
             }
         ],
-        inputParameters: ['http_options', 'http_body_data'],
+        inputParameters: ['body', 'uri', 'method', 'timeout', 'verifyCertificate', 'headers', 'basicAuth', 'contentType', 'cookies'],
         failureWorkflow: 'fail_rollback',
         schemaVersion: 2
     }
 ]
 
-let options = {
-    protocol: 'https:',
-    host: 'httpbin.org',
-    path: '/post',
+const input = {
+    uri: 'https://httpbin.org/post',
     method: 'POST',
-    headers: {'Content-Type': 'text/html; charset=UTF8'}
+    headers: {'Content-Type': 'text/html; charset=UTF8'},
+    body: 'some data',
+    timeout: 1000
 };
 
 conductorClient
     .registerTaskDefs([httpTaskDef])
     .then(() =>
         conductorClient.updateWorkflowDefs(workflowDefs).then(() => {
-            conductorClient.startWorkflow('test_workflow', {
-                http_options: options, http_body_data: 'some data'
-            }).then(xxx => console.log('workflow start:', xxx.data));
+            conductorClient.startWorkflow('test_workflow', input).then(xxx => console.log('workflow start:', xxx.data));
         })
     )
     .catch(error => console.dir(error, { depth: 10 }))

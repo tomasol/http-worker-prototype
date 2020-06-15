@@ -13,6 +13,7 @@ const logger = winston.createLogger({
     format: winston.format.simple(),
     defaultMeta: { service: 'http-worker' },
     transports: [
+        new winston.transports.Console({ level: 'debug' }),
         new winston.transports.File({ filename: 'httpworker_error.log', level: 'error' }),
         new winston.transports.File({ filename: 'httpworker.log' }),
     ],
@@ -74,7 +75,16 @@ let pickLibrary = protocol => 'https:' === protocol ? https : http;
 function executeHttp(workerHttpRequest, grpcCallback) {
     // prepare request from the data from GRPc call
     const options = JSON.parse(workerHttpRequest.request.requestOptions);
-    const req = pickLibrary(options.protocol).request(options, HttpResponseHandler(grpcCallback));
+
+    let req;
+    try{
+        req = pickLibrary(options.protocol).request(options, HttpResponseHandler(grpcCallback));
+    } catch (e) {
+        console.log('Error', e);
+        //TODO logging + Errors
+        grpcCallback(null, createGrpcResponse('FAILED'));
+        return;
+    }
 
     req.on('error', (e) => {
         logger.error('Error occured while doing a HTTP request: ', e);

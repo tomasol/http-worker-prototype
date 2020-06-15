@@ -1,8 +1,9 @@
 var http = require("https");
 
 let options = {protocol: 'https:', host: 'httpbin.org', path: '/post', method: 'POST'}
+let options2 = {"method":"POST","protocol":"https:","hostname":"httpbin.org","path":"/post","insecure":true,"headers":{"Content-Type":"text/html; charset=UTF8"}};
 
-var req = http.request(options, function(res) {
+var req = http.request(options2, function(res) {
     console.log('STATUS: ' + res.statusCode);
     console.log('HEADERS: ' + JSON.stringify(res.headers));
     res.setEncoding('utf8');
