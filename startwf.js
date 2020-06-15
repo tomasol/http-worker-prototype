@@ -44,11 +44,18 @@ const input = {
     timeout: 1000
 };
 
+const input2 = {
+    uri: 'https://postman-echo.com/cookies/set?foo1=bar1&foo2=bar2',
+    method: 'GET',
+    timeout: 1000
+};
+
+
 conductorClient
     .registerTaskDefs([httpTaskDef])
     .then(() =>
         conductorClient.updateWorkflowDefs(workflowDefs).then(() => {
-            conductorClient.startWorkflow('test_workflow', input).then(xxx => console.log('workflow start:', xxx.data));
+            conductorClient.startWorkflow('test_workflow', input2).then(xxx => console.log('workflow start:', xxx.data));
         })
     )
     .catch(error => console.dir(error, { depth: 10 }))

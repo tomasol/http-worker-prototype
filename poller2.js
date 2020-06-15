@@ -22,7 +22,7 @@ const httpTaskDef =
         retryCount: 3,
         timeoutSeconds: 3600,
         inputKeys: ['body', 'uri', 'method', 'timeout', 'verifyCertificate', 'headers', 'basicAuth', 'contentType', 'cookies'],
-        outputKeys: ['http_response'],
+        outputKeys: ['statusCode', 'response', 'body', 'cookies'],
         timeoutPolicy: 'TIME_OUT_WF',
         retryLogic: 'FIXED',
         retryDelaySeconds: 60,
@@ -77,7 +77,7 @@ let registerHttpWorker = () => conductorClient.registerWatcher(
     httpTaskDef.name,
     async (data, updater) => {
         try {
-            logger.verbose('Received task data type: ', data.taskType, ' data: ', data.inputData)
+            logger.verbose(`Received task data type: ${data.taskType} data: ${data.inputData}` );
 
             const httpOptions = frinxHttpParamsToHttpParams(
                 data.inputData.uri,
@@ -92,15 +92,19 @@ let registerHttpWorker = () => conductorClient.registerWatcher(
             );
 
             logger.debug('httpOptions', httpOptions);
-            doHttpRequest(httpOptions, data.inputData.body, async (err, response) => {
+            doHttpRequest(httpOptions, data.inputData.body, async (err, grpcResponse) => {
+                logger.verbose(`Response from worker was received: ${grpcResponse.headers}`);
                 await conductorClient.updateTask({
                     workflowInstanceId: data.workflowInstanceId,
                     taskId: data.taskId,
-                    status: response.status,
+                    status: grpcResponse.status,
                     outputData: {
-                        http_response: response.output
+                        response: {headers: grpcResponse.headers},
+                        body: grpcResponse.body,
+                        statusCode: grpcResponse.statusCode,
+                        cookies: grpcResponse.cookies
                     },
-                    logs: ['2233344']
+                    logs: ['HTTP request finished with status ' + grpcResponse.status]
                 });
             } )
 

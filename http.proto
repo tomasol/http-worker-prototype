@@ -17,6 +17,9 @@ message WorkerHttpRequest {
 }
 
 message WorkerHttpReply {
-  string output = 1;
-  string status = 2;
+  string status = 1;
+  string statusCode = 2;
+  string headers = 3;
+  string cookies = 4;
+  string body = 5;
 }

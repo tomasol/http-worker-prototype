@@ -44,27 +44,42 @@ let getEncoding = function(headers) {
     return result;
 }
 
-let createGrpcResponse = (status, data) => {
-    if (data) {
-        return {output: data, status: status};
+let createGrpcResponse = (status, statusCode, body, cookies, headers) => {
+    console.log('BODYYYY!!!', body.data);
+    if (statusCode) {
+        return {status: status, statusCode: statusCode, body: body, cookies: cookies, headers: headers};
     } else {
         return {status: status};
     }
 }
 
+let supportedEncodings = ["ascii", "utf8", "utf-8", "utf16le", "ucs2", "ucs-2", "base64", "latin1", "binary", "hex"];
+
 let HttpResponseHandler = grpcCallback => {
     return (res) => {
-       const responseEncoding = getEncoding(res.headers);
+       let responseEncoding = getEncoding(res.headers);
+
+       //TODO can it be better
+       if(!supportedEncodings.includes(responseEncoding)) {
+           const defaultEncoding = getEncoding({});
+           logger.warn(`The response encoding is ${responseEncoding} but it is not supported, defaulting to ${defaultEncoding}`);
+           responseEncoding = defaultEncoding;
+       }
+
        res.setEncoding(responseEncoding);
        let chunks = [];
        res.on('data', chunk => {
-           chunks.push(Buffer.from(chunk, responseEncoding))
+           chunks.push(Buffer.from(chunk, responseEncoding));
        });
        res.on('close', chunk => {
            if (chunk) {
                chunks.push(Buffer.from(chunk, responseEncoding));
            }
-           grpcCallback(null, createGrpcResponse(completed, Buffer.concat(chunks).toString(responseEncoding)))
+           grpcCallback(null, createGrpcResponse(
+               completed,res.statusCode,
+              Buffer.concat(chunks).toString(responseEncoding),
+               'COOKIES',
+               JSON.stringify(res.headers)))
        });
         res.on('aborted', _ => grpcCallback(null, createGrpcResponse(failed)));
     }
@@ -87,13 +102,13 @@ function executeHttp(workerHttpRequest, grpcCallback) {
     }
 
     req.on('error', (e) => {
-        logger.error('Error occured while doing a HTTP request: ', e);
+        logger.error(`Error occured while doing a HTTP request: ${e}`);
         grpcCallback(null, createGrpcResponse('FAILED'));
     });
 
     // when socket times out we need to abort manually ..
     req.on('timeout', () => {
-        logger.error('Timeout occured while doing a HTTP request, aborting request');
+        logger.error('Timeout occurred while doing a HTTP request, aborting request');
         req.abort();
     });
 
