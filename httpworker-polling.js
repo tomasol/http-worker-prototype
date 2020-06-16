@@ -1,91 +1,39 @@
 const ConductorClient = require('conductor-client').default
-const {doHttpRequest} = require('./httpclient2');
-const winston = require('winston');
+const {sendGrpcRequest} = require('./httpworker-grpc-client');
+const {frinxHttpParamsToHttpParams} = require('./utils');
+const config = require('./config.json');
+const {httpTaskDef} = require('./defs');
+const {createLogger} = require('./utils');
 
-const logger = winston.createLogger({
-    level: 'debug',
-    format: winston.format.simple(),
-    defaultMeta: { service: 'conductor-poller' },
-    transports: [
-        new winston.transports.Console({ level: 'debug' }),
-        new winston.transports.File({ filename: 'conductor_poller_error.log', level: 'error' }),
-        new winston.transports.File({ filename: 'conductor_poller.log' }),
-    ],
-});
+const environment = process.env.NODE_ENV || 'development';
+const pollerConfig = config[environment];
+
+const logger = createLogger('conductor-poller', pollerConfig.poller_log, 'debug', 'debug');
+
 const conductorClient = new ConductorClient({
-    baseURL: 'http://localhost:8080/api'
+    baseURL: pollerConfig.conductor_url
 })
 
-const httpTaskDef =
-    {
-        name: 'http_task',
-        retryCount: 3,
-        timeoutSeconds: 3600,
-        inputKeys: ['body', 'uri', 'method', 'timeout', 'verifyCertificate', 'headers', 'basicAuth', 'contentType', 'cookies'],
-        outputKeys: ['statusCode', 'response', 'body', 'cookies'],
-        timeoutPolicy: 'TIME_OUT_WF',
-        retryLogic: 'FIXED',
-        retryDelaySeconds: 60,
-        responseTimeoutSeconds: 3600
-    };
-
-
-let frinxHttpParamsToHttpParams = (
-    uri,
-    method,
-    body,
-    timeout,
-    verifyCertificate,
-    headers,
-    basicAuth,
-    contentType,
-    cookies ) => {
-    let httpOptions = {};
-    const parsedUrl = new URL(uri);
-    httpOptions['method'] = method;
-    httpOptions['protocol'] = parsedUrl.protocol;
-    httpOptions['hostname'] = parsedUrl.hostname;
-
-    if (parsedUrl.port) {
-        httpOptions['port'] = parsedUrl.port;
-    }
-
-    httpOptions['path'] = parsedUrl.pathname + parsedUrl.search;
-    httpOptions['insecure'] = !verifyCertificate;
-
-    if (headers) {
-        headers = {};
-    }
-
-    if (contentType) {
-        headers['Content-Type'] = contentType;
-    }
-
-    if (cookies) {
-        headers['Set-Cookie'] = cookies;
-    }
-
-    if (basicAuth) {
-        const auth = 'Basic ' + Buffer.from(basicAuth.username + ':' + basicAuth.password).toString('base64');
-        headers['Authorization'] = auth;
-    }
-
-    if (headers) {
-        httpOptions['headers'] = headers;
-    }
-
-    if (timeout) {
-        httpOptions['timeout'] = timeout;
-    }
-
-    return httpOptions;
+async function updateWorkflowState(workflowInstanceId, taskId, grpcResponse) {
+    await conductorClient.updateTask({
+        workflowInstanceId: workflowInstanceId,
+        taskId: taskId,
+        status: grpcResponse.status,
+        outputData: {
+            response: {headers: grpcResponse.headers},
+            body: grpcResponse.body,
+            statusCode: grpcResponse.statusCode,
+            cookies: grpcResponse.cookies
+        },
+        logs: ['HTTP request finished with status ' + grpcResponse.status]
+    });
 }
 
 let registerHttpWorker = () => conductorClient.registerWatcher(
     httpTaskDef.name,
     async (data, updater) => {
         try {
-            logger.verbose(`Received task data type: ${data.taskType} data: ${data.inputData}` );
+            logger.verbose(`Received task data type: ${data.taskType} data: ${data.inputData}`);
 
             const httpOptions = frinxHttpParamsToHttpParams(
                 data.inputData.uri,
@@ -99,31 +47,18 @@ let registerHttpWorker = () => conductorClient.registerWatcher(
                 data.inputData.cookies,
             );
 
-            logger.debug('httpOptions', httpOptions);
-            doHttpRequest(httpOptions, data.inputData.body, async (err, grpcResponse) => {
-                logger.verbose(`Response from worker was received: ${grpcResponse.cookies}`);
-                await conductorClient.updateTask({
-                    workflowInstanceId: data.workflowInstanceId,
-                    taskId: data.taskId,
-                    status: grpcResponse.status,
-                    outputData: {
-                        response: {headers: grpcResponse.headers},
-                        body: grpcResponse.body,
-                        statusCode: grpcResponse.statusCode,
-                        cookies: grpcResponse.cookies
-                    },
-                    logs: ['HTTP request finished with status ' + grpcResponse.status]
+            sendGrpcRequest(httpOptions, data.inputData.body,
+                async (err, grpcResponse) => {
+                    logger.verbose(`Response from worker was received: ${grpcResponse.cookies}`);
+                    await updateWorkflowState(data.workflowInstanceId, data.taskId, grpcResponse);
                 });
-            } )
-
         } catch (error) {
             logger.error('Unable to do HTTP request ', error);
             //TODO error handling ?
         }
     },
-    { pollingIntervals: 1000, autoAck: true, maxRunner: 1 },
+    {pollingIntervals: 1000, autoAck: true, maxRunner: 1},
     true
 );
 
-exports.httpTaskDef = httpTaskDef;
 exports.registerHttpWorker = registerHttpWorker;

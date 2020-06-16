@@ -1,0 +1,9 @@
+{
+  "development": {
+    "conductor_url": "http://localhost:8080/api",
+    "poller_log": "conductor_poller.log",
+    "httpworker_log": "httpworker.log",
+    "httpworker_bind_address": "0.0.0.0:50051",
+    "httpworker_address": "localhost:50051"
+  }
+}

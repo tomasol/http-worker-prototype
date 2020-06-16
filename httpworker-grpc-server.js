@@ -3,26 +3,22 @@ const grpc = require('grpc');
 const protoLoader = require('@grpc/proto-loader');
 const http = require('http');
 const https = require('https');
-const winston = require('winston');
+const config = require('./config.json');
 const setCookie = require('set-cookie-parser');
+const {createLogger, supportedEncodings, createGrpcResponse} = require('./utils');
+
+const environment = process.env.NODE_ENV || 'development';
+const workerConfig = config[environment];
 
 const completed = 'COMPLETED';
 const failed = 'FAILED';
 
-const logger = winston.createLogger({
-    level: 'debug',
-    format: winston.format.simple(),
-    defaultMeta: { service: 'http-worker' },
-    transports: [
-        new winston.transports.Console({ level: 'debug' }),
-        new winston.transports.File({ filename: 'httpworker_error.log', level: 'error' }),
-        new winston.transports.File({ filename: 'httpworker.log' }),
-    ],
-});
+const logger = createLogger('http-worker', workerConfig.httpworker_log, 'debug', 'debug');
 
 const packageDefinition = protoLoader.loadSync(
     PROTO_PATH,
-    {keepCase: true,
+    {
+        keepCase: true,
         longs: String,
         enums: String,
         defaults: true,
@@ -45,39 +41,30 @@ let getEncoding = function(headers) {
     return result;
 }
 
-let createGrpcResponse = (status, statusCode, body, cookies, headers) => {
-    if (statusCode) {
-        return {status: status, statusCode: statusCode, body: body, cookies: JSON.stringify(cookies), headers: headers};
-    } else {
-        return {status: status};
-    }
-}
-
-let supportedEncodings = ["ascii", "utf8", "utf-8", "utf16le", "ucs2", "ucs-2", "base64", "latin1", "binary", "hex"];
-
 let HttpResponseHandler = grpcCallback => {
     return (res) => {
        let responseEncoding = getEncoding(res.headers);
 
-       //TODO can it be better
-       if(!supportedEncodings.includes(responseEncoding)) {
+       //TODO handle encoding mismatch?
+       if (!supportedEncodings.includes(responseEncoding)) {
            const defaultEncoding = getEncoding({});
            logger.warn(`The response encoding is ${responseEncoding} but it is not supported, defaulting to ${defaultEncoding}`);
            responseEncoding = defaultEncoding;
        }
 
        res.setEncoding(responseEncoding);
-       let chunks = [];
+       let chunks = []; // for storing response 'chunks' as they arrive one by one
        res.on('data', chunk => {
-           chunks.push(Buffer.from(chunk, responseEncoding));
+           chunks.push(Buffer.from(chunk, responseEncoding)); //store incoming data
        });
-       res.on('close', chunk => {
+       res.on('close', chunk => { // we are done, http is closed
            if (chunk) {
                chunks.push(Buffer.from(chunk, responseEncoding));
            }
            grpcCallback(null, createGrpcResponse(
-               completed,res.statusCode,
-              Buffer.concat(chunks).toString(responseEncoding),
+               completed,
+               res.statusCode,
+               Buffer.concat(chunks).toString(responseEncoding),
                setCookie.parse(res),
                JSON.stringify(res.headers)))
        });
@@ -88,7 +75,7 @@ let HttpResponseHandler = grpcCallback => {
 let pickLibrary = protocol => 'https:' === protocol ? https : http;
 
 function executeHttp(workerHttpRequest, grpcCallback) {
-    // prepare request from the data from GRPc call
+    // prepare HTTP request parameters from the data received via the gRPC call
     const options = JSON.parse(workerHttpRequest.request.requestOptions);
 
     let req;
@@ -135,5 +122,5 @@ let getServer = function () {
 }
 
 const routeServer = getServer();
-routeServer.bind('0.0.0.0:50051', grpc.ServerCredentials.createInsecure());
+routeServer.bind(workerConfig.httpworker_bind_address, grpc.ServerCredentials.createInsecure());
 routeServer.start();
