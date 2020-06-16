@@ -12,7 +12,7 @@ const createLogger = (serviceName, logFilename, consoleLogLevel, overallLogLevel
     });
 }
 
-const frinxHttpParamsToHttpParams = (
+const conductorHttpParamsToNodejsHttpParams = (
     uri,
     method,
     body,
@@ -73,7 +73,21 @@ let createGrpcResponse = (status, statusCode, body, cookies, headers) => {
 
 let supportedEncodings = ["ascii", "utf8", "utf-8", "utf16le", "ucs2", "ucs-2", "base64", "latin1", "binary", "hex"];
 
-exports.frinxHttpParamsToHttpParams = frinxHttpParamsToHttpParams;
+let getEncoding = function(headers) {
+    let result = 'utf-8'; //default encoding
+
+    Object.keys(headers).forEach(function (key) {
+        if (key.toLowerCase() === 'content-type') {
+            let split = headers[key].toLowerCase().split('charset=');
+            result = split.length === 2 ? split[1] : result;
+        }
+    });
+
+    return result;
+}
+
+exports.conductorHttpParamsToNodejsHttpParams = conductorHttpParamsToNodejsHttpParams;
 exports.createLogger = createLogger;
 exports.supportedEncodings = supportedEncodings;
 exports.createGrpcResponse = createGrpcResponse;
+exports.getEncoding = getEncoding;

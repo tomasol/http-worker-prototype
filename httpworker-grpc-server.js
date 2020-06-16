@@ -5,7 +5,7 @@ const http = require('http');
 const https = require('https');
 const config = require('./config.json');
 const setCookie = require('set-cookie-parser');
-const {createLogger, supportedEncodings, createGrpcResponse} = require('./utils');
+const {createLogger, supportedEncodings, createGrpcResponse, getEncoding} = require('./utils');
 
 const environment = process.env.NODE_ENV || 'development';
 const workerConfig = config[environment];
@@ -28,31 +28,23 @@ const protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
 
 const httpproto = protoDescriptor.httpproto;
 
-let getEncoding = function(headers) {
-    let result = 'utf-8'; //default encoding
+//TODO how handle mismatch between real-world and http(s) supported encodings in nodejs?
+let verifyEncoding = suggestedEncoding => {
+    if (!supportedEncodings.includes(suggestedEncoding)) {
+        const defaultEncoding = getEncoding({}); // get the default
+        logger.warn(`The response encoding is ${suggestedEncoding} but it is not supported, defaulting to ${defaultEncoding}`);
+        return defaultEncoding;
+    }
 
-    Object.keys(headers).forEach(function (key) {
-        if (key.toLowerCase() === 'content-type') {
-            let split = headers[key].toLowerCase().split('charset=');
-            result = split.length === 2 ? split[1] : result;
-        }
-    });
-
-    return result;
+    return suggestedEncoding;
 }
 
 let HttpResponseHandler = grpcCallback => {
     return (res) => {
-       let responseEncoding = getEncoding(res.headers);
-
-       //TODO handle encoding mismatch?
-       if (!supportedEncodings.includes(responseEncoding)) {
-           const defaultEncoding = getEncoding({});
-           logger.warn(`The response encoding is ${responseEncoding} but it is not supported, defaulting to ${defaultEncoding}`);
-           responseEncoding = defaultEncoding;
-       }
+       const responseEncoding = verifyEncoding(getEncoding(res.headers));
 
        res.setEncoding(responseEncoding);
+
        let chunks = []; // for storing response 'chunks' as they arrive one by one
        res.on('data', chunk => {
            chunks.push(Buffer.from(chunk, responseEncoding)); //store incoming data

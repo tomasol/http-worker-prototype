@@ -1,6 +1,6 @@
 const ConductorClient = require('conductor-client').default
 const {sendGrpcRequest} = require('./httpworker-grpc-client');
-const {frinxHttpParamsToHttpParams} = require('./utils');
+const {conductorHttpParamsToNodejsHttpParams} = require('./utils');
 const config = require('./config.json');
 const {httpTaskDef} = require('./defs');
 const {createLogger} = require('./utils');
@@ -35,7 +35,7 @@ let registerHttpWorker = () => conductorClient.registerWatcher(
         try {
             logger.verbose(`Received task data type: ${data.taskType} data: ${data.inputData}`);
 
-            const httpOptions = frinxHttpParamsToHttpParams(
+            const httpOptions = conductorHttpParamsToNodejsHttpParams(
                 data.inputData.uri,
                 data.inputData.method,
                 data.inputData.body,
