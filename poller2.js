@@ -53,11 +53,21 @@ let frinxHttpParamsToHttpParams = (
     httpOptions['path'] = parsedUrl.pathname + parsedUrl.search;
     httpOptions['insecure'] = !verifyCertificate;
 
+    if (headers) {
+        headers = {};
+    }
+
     if (contentType) {
-        if (headers) {
-            headers = {};
-        }
         headers['Content-Type'] = contentType;
+    }
+
+    if (cookies) {
+        headers['Set-Cookie'] = cookies;
+    }
+
+    if (basicAuth) {
+        const auth = 'Basic ' + Buffer.from(basicAuth.username + ':' + basicAuth.password).toString('base64');
+        headers['Authorization'] = auth;
     }
 
     if (headers) {
@@ -68,8 +78,6 @@ let frinxHttpParamsToHttpParams = (
         httpOptions['timeout'] = timeout;
     }
 
-    //TODO basic Auth
-    //TODO cookies
     return httpOptions;
 }
 
@@ -93,7 +101,7 @@ let registerHttpWorker = () => conductorClient.registerWatcher(
 
             logger.debug('httpOptions', httpOptions);
             doHttpRequest(httpOptions, data.inputData.body, async (err, grpcResponse) => {
-                logger.verbose(`Response from worker was received: ${grpcResponse.headers}`);
+                logger.verbose(`Response from worker was received: ${grpcResponse.cookies}`);
                 await conductorClient.updateTask({
                     workflowInstanceId: data.workflowInstanceId,
                     taskId: data.taskId,

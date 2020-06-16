@@ -4,6 +4,7 @@ const protoLoader = require('@grpc/proto-loader');
 const http = require('http');
 const https = require('https');
 const winston = require('winston');
+const setCookie = require('set-cookie-parser');
 
 const completed = 'COMPLETED';
 const failed = 'FAILED';
@@ -45,9 +46,8 @@ let getEncoding = function(headers) {
 }
 
 let createGrpcResponse = (status, statusCode, body, cookies, headers) => {
-    console.log('BODYYYY!!!', body.data);
     if (statusCode) {
-        return {status: status, statusCode: statusCode, body: body, cookies: cookies, headers: headers};
+        return {status: status, statusCode: statusCode, body: body, cookies: JSON.stringify(cookies), headers: headers};
     } else {
         return {status: status};
     }
@@ -78,7 +78,7 @@ let HttpResponseHandler = grpcCallback => {
            grpcCallback(null, createGrpcResponse(
                completed,res.statusCode,
               Buffer.concat(chunks).toString(responseEncoding),
-               'COOKIES',
+               setCookie.parse(res),
                JSON.stringify(res.headers)))
        });
         res.on('aborted', _ => grpcCallback(null, createGrpcResponse(failed)));
@@ -95,15 +95,14 @@ function executeHttp(workerHttpRequest, grpcCallback) {
     try{
         req = pickLibrary(options.protocol).request(options, HttpResponseHandler(grpcCallback));
     } catch (e) {
-        console.log('Error', e);
-        //TODO logging + Errors
-        grpcCallback(null, createGrpcResponse('FAILED'));
+        logger.error(`Unable to complete the HTTP request for ${options.uri}, finished with error ${e}`);
+        grpcCallback(null, createGrpcResponse(failed));
         return;
     }
 
     req.on('error', (e) => {
         logger.error(`Error occured while doing a HTTP request: ${e}`);
-        grpcCallback(null, createGrpcResponse('FAILED'));
+        grpcCallback(null, createGrpcResponse(failed));
     });
 
     // when socket times out we need to abort manually ..
