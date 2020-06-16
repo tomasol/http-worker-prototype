@@ -1,5 +1,5 @@
 const ConductorClient = require('conductor-client').default
-const {httpTaskDef, registerHttpWorker} = require('./poller2');
+const {httpTaskDef, registerHttpWorker} = require('./httpworker-polling');
 
 const conductorClient = new ConductorClient({
     baseURL: 'http://localhost:8080/api'
