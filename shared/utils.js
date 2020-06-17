@@ -1,5 +1,26 @@
 const winston = require('winston');
+const PROTO_PATH = __dirname + '/http.proto';
+const grpc = require('grpc');
+const protoLoader = require('@grpc/proto-loader');
+const configs = require('../shared/config.json');
 
+// retrieve config boilerplate
+const environment = process.env.NODE_ENV || 'development';
+const config = configs[environment];
+
+// gRPC boilerplate
+const packageDefinition = protoLoader.loadSync(
+    PROTO_PATH,
+    {keepCase: true,
+        longs: String,
+        enums: String,
+        defaults: true,
+        oneofs: true
+    });
+
+const protoDescriptor = _ => grpc.loadPackageDefinition(packageDefinition);
+
+// logger config
 const createLogger = (serviceName, logFilename, consoleLogLevel, overallLogLevel) => {
     return winston.createLogger({
         level: overallLogLevel,
@@ -91,3 +112,5 @@ exports.createLogger = createLogger;
 exports.supportedEncodings = supportedEncodings;
 exports.createGrpcResponse = createGrpcResponse;
 exports.getEncoding = getEncoding;
+exports.protoDescriptor = protoDescriptor;
+exports.config = config;

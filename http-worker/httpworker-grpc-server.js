@@ -1,31 +1,15 @@
-const PROTO_PATH = __dirname + '/../shared/http.proto';
 const grpc = require('grpc');
-const protoLoader = require('@grpc/proto-loader');
 const http = require('http');
 const https = require('https');
-const config = require('../shared/config.json');
 const setCookie = require('set-cookie-parser');
-const {createLogger, supportedEncodings, createGrpcResponse, getEncoding} = require('../shared/utils');
 
-const environment = process.env.NODE_ENV || 'development';
-const workerConfig = config[environment];
+const {protoDescriptor, config, createLogger, supportedEncodings, createGrpcResponse, getEncoding} = require('../shared/utils');
 
 const completed = 'COMPLETED', failed = 'FAILED';
 
-const logger = createLogger('http-worker', workerConfig.httpworker_log, 'debug', 'debug');
+const logger = createLogger('http-worker', config.httpworker_log, 'debug', 'debug');
 
-const packageDefinition = protoLoader.loadSync(
-    PROTO_PATH,
-    {
-        keepCase: true,
-        longs: String,
-        enums: String,
-        defaults: true,
-        oneofs: true
-    });
-const protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
-
-const httpproto = protoDescriptor.httpproto;
+const httpproto = protoDescriptor().httpproto;
 
 //TODO how handle mismatch between real-world and http(s) supported encodings in nodejs?
 let verifyEncoding = suggestedEncoding => {
@@ -124,5 +108,5 @@ let getServer = function () {
 }
 
 const routeServer = getServer();
-routeServer.bind(workerConfig.httpworker_bind_address, grpc.ServerCredentials.createInsecure());
+routeServer.bind(config.httpworker_bind_address, grpc.ServerCredentials.createInsecure());
 routeServer.start();
