@@ -62,7 +62,7 @@ let registerHttpWorker = () => conductorClient.registerWatcher(
                     await updateWorkflowState(data.workflowInstanceId, data.taskId, grpcResponse);
                 });
         } catch (error) {
-            logger.error('Unable to do HTTP request ', error);
+            logger.error(`Unable to do HTTP request ${error}`);
             //TODO error handling ?
         }
     },

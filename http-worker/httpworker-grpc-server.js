@@ -11,7 +11,7 @@ const logger = createLogger('http-worker', config.httpworker_log, 'debug', 'debu
 
 const httpproto = protoDescriptor().httpproto;
 
-//TODO how handle mismatch between real-world and http(s) supported encodings in nodejs?
+//TODO how handle mismatch between real-world and nodejs http(s) supported encodings?
 let verifyEncoding = suggestedEncoding => {
     if (!supportedEncodings.includes(suggestedEncoding)) {
         const defaultEncoding = getEncoding({}); // get the default
@@ -24,7 +24,7 @@ let verifyEncoding = suggestedEncoding => {
 
 /**
  *
- * @param grpcCallback callback for the grpc response
+ * @param grpcCallback callback for the gRPC response
  * @returns function callback which handles HTTP responses
  */
 let HttpResponseHandler = grpcCallback => {
@@ -68,13 +68,13 @@ function executeHttp(workerHttpRequest, grpcCallback) {
     try{
         req = pickLibrary(options.protocol).request(options, HttpResponseHandler(grpcCallback));
     } catch (e) {
-        logger.error(`Unable to complete the HTTP request for ${options.uri}, finished with error ${e}`);
+        logger.error(`Unable to complete the HTTP request for ${options.uri}, finished with exception ${e}`);
         grpcCallback(null, createGrpcResponse(failed));
         return;
     }
 
     req.on('error', (e) => {
-        logger.error(`Error occured while doing a HTTP request: ${e}`);
+        logger.error(`Error occurred while executing the HTTP request for ${options.uri}, finished with error ${e}`);
         grpcCallback(null, createGrpcResponse(failed));
     });
 
@@ -85,12 +85,12 @@ function executeHttp(workerHttpRequest, grpcCallback) {
     });
 
     req.on('abort', () => {
-        logger.error('The request was aborted');
+        logger.error(`The request to ${options.uri} was aborted`);
         grpcCallback(null, createGrpcResponse(failed));
     });
 
     req.on('response', () => {
-        logger.verbose('The HTTP response was received');
+        logger.verbose(`The HTTP response from ${options.uri} was received`);
     });
 
     //write POST or PUT content
