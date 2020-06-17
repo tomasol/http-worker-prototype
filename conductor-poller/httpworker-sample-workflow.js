@@ -1,6 +1,6 @@
 const ConductorClient = require('conductor-client').default
-const {registerHttpWorker} = require('./httpworker-polling');
-const {httpTaskDef, sampleWorkflowDef} = require('./defs');
+const {registerHttpWorker} = require('./conductor-polling');
+const {httpTaskDef, sampleWorkflowDef} = require('../shared/defs');
 
 const conductorClient = new ConductorClient({
     baseURL: 'http://localhost:8080/api'
@@ -25,7 +25,7 @@ conductorClient
     .registerTaskDefs([httpTaskDef])
     .then(() =>
         conductorClient.updateWorkflowDefs([sampleWorkflowDef]).then(() => {
-            conductorClient.startWorkflow(sampleWorkflowDef.name, input2).then(workflow => console.log('workflow start:', workflow.data));
+            conductorClient.startWorkflow(sampleWorkflowDef.name, input2).then(workflow => console.log('workflow started, id: ', workflow.data));
         })
     )
     .catch(error => console.dir(error, {depth: 10}))

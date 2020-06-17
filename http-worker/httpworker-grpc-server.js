@@ -1,17 +1,16 @@
-const PROTO_PATH = __dirname + '/http.proto';
+const PROTO_PATH = __dirname + '/../shared/http.proto';
 const grpc = require('grpc');
 const protoLoader = require('@grpc/proto-loader');
 const http = require('http');
 const https = require('https');
-const config = require('./config.json');
+const config = require('../shared/config.json');
 const setCookie = require('set-cookie-parser');
-const {createLogger, supportedEncodings, createGrpcResponse, getEncoding} = require('./utils');
+const {createLogger, supportedEncodings, createGrpcResponse, getEncoding} = require('../shared/utils');
 
 const environment = process.env.NODE_ENV || 'development';
 const workerConfig = config[environment];
 
-const completed = 'COMPLETED';
-const failed = 'FAILED';
+const completed = 'COMPLETED', failed = 'FAILED';
 
 const logger = createLogger('http-worker', workerConfig.httpworker_log, 'debug', 'debug');
 
@@ -39,6 +38,11 @@ let verifyEncoding = suggestedEncoding => {
     return suggestedEncoding;
 }
 
+/**
+ *
+ * @param grpcCallback callback for the grpc response
+ * @returns function callback which handles HTTP responses
+ */
 let HttpResponseHandler = grpcCallback => {
     return (res) => {
        const responseEncoding = verifyEncoding(getEncoding(res.headers));
@@ -66,6 +70,12 @@ let HttpResponseHandler = grpcCallback => {
 
 let pickLibrary = protocol => 'https:' === protocol ? https : http;
 
+/**
+ * gRPC callback function which handles gRPC request data, invokes HTTP and returns
+ * the HTTP response back via the gRPC
+ * @param workerHttpRequest the gRPC request with HTTP options
+ * @param grpcCallback callback which makes the gRPC response
+ */
 function executeHttp(workerHttpRequest, grpcCallback) {
     // prepare HTTP request parameters from the data received via the gRPC call
     const options = JSON.parse(workerHttpRequest.request.requestOptions);

@@ -1,9 +1,9 @@
 const ConductorClient = require('conductor-client').default
-const {sendGrpcRequest} = require('./httpworker-grpc-client');
-const {conductorHttpParamsToNodejsHttpParams} = require('./utils');
-const config = require('./config.json');
-const {httpTaskDef} = require('./defs');
-const {createLogger} = require('./utils');
+const {sendGrpcRequest} = require('./grpc-client');
+const {conductorHttpParamsToNodejsHttpParams} = require('../shared/utils');
+const config = require('../shared/config.json');
+const {httpTaskDef} = require('../shared/defs');
+const {createLogger} = require('../shared/utils');
 
 const environment = process.env.NODE_ENV || 'development';
 const pollerConfig = config[environment];
@@ -14,6 +14,12 @@ const conductorClient = new ConductorClient({
     baseURL: pollerConfig.conductor_url
 })
 
+/**
+ * Updates the conductor with results
+ * @param workflowInstanceId worfkflow to be updated
+ * @param taskId task which does the update
+ * @param grpcResponse data received from the HTTP worker
+ */
 async function updateWorkflowState(workflowInstanceId, taskId, grpcResponse) {
     await conductorClient.updateTask({
         workflowInstanceId: workflowInstanceId,
@@ -29,6 +35,9 @@ async function updateWorkflowState(workflowInstanceId, taskId, grpcResponse) {
     });
 }
 
+/**
+ * registers polling for the http worker task
+ */
 let registerHttpWorker = () => conductorClient.registerWatcher(
     httpTaskDef.name,
     async (data, updater) => {
@@ -49,7 +58,7 @@ let registerHttpWorker = () => conductorClient.registerWatcher(
 
             sendGrpcRequest(httpOptions, data.inputData.body,
                 async (err, grpcResponse) => {
-                    logger.verbose(`Response from worker was received: ${grpcResponse.cookies}`);
+                    logger.verbose(`Response from HTTP worker was received with status code: ${grpcResponse.statusCode}`);
                     await updateWorkflowState(data.workflowInstanceId, data.taskId, grpcResponse);
                 });
         } catch (error) {

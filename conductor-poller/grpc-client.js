@@ -1,7 +1,7 @@
-const PROTO_PATH = __dirname + '/http.proto';
+const PROTO_PATH = __dirname + '/../shared/http.proto';
 const grpc = require('grpc');
 const protoLoader = require('@grpc/proto-loader');
-const config = require('./config.json');
+const config = require('../shared/config.json');
 
 const environment = process.env.NODE_ENV || 'development';
 const workerConfig = config[environment];
@@ -17,6 +17,12 @@ const packageDefinition = protoLoader.loadSync(
 const protoDescriptor = grpc.loadPackageDefinition(packageDefinition);
 
 const httpproto = protoDescriptor.httpproto;
+
+/**
+ *
+ * @param options HTTP options for the "http(s)" nodejs library
+ * @param httpPayload body of the request (in case of POST/PUT...)
+ */
 
 let sendGrpcRequest = (options, httpPayload, callback) => {
     const client = new httpproto.HttpWorker(workerConfig.httpworker_address,
