@@ -1,17 +1,13 @@
 const ConductorClient = require('conductor-client').default
 const {sendGrpcRequest} = require('./grpc-client');
 const {conductorHttpParamsToNodejsHttpParams} = require('../shared/utils');
-const config = require('../shared/config.json');
 const {httpTaskDef} = require('../shared/defs');
-const {createLogger} = require('../shared/utils');
+const {createLogger, config} = require('../shared/utils');
 
-const environment = process.env.NODE_ENV || 'development';
-const pollerConfig = config[environment];
-
-const logger = createLogger('conductor-poller', pollerConfig.poller_log, 'debug', 'debug');
+const logger = createLogger('conductor-poller', config.poller_log, config.console_log_level, config.overall_log_level);
 
 const conductorClient = new ConductorClient({
-    baseURL: pollerConfig.conductor_url
+    baseURL: config.conductor_url
 })
 
 /**

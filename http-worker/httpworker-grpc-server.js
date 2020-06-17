@@ -7,7 +7,7 @@ const {protoDescriptor, config, createLogger, supportedEncodings, createGrpcResp
 
 const completed = 'COMPLETED', failed = 'FAILED';
 
-const logger = createLogger('http-worker', config.httpworker_log, 'debug', 'debug');
+const logger = createLogger('http-worker', config.httpworker_log, config.console_log_level, config.overall_log_level);
 
 const httpproto = protoDescriptor().httpproto;
 

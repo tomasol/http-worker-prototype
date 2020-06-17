@@ -4,6 +4,8 @@
     "poller_log": "conductor_poller.log",
     "httpworker_log": "httpworker.log",
     "httpworker_bind_address": "0.0.0.0:50051",
-    "httpworker_address": "localhost:50051"
+    "httpworker_address": "localhost:50051",
+    "console_log_level": "debug",
+    "overall_log_level": "debug"
   }
 }
