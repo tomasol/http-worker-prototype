@@ -107,6 +107,16 @@ let getEncoding = function(headers) {
     return result;
 }
 
+let parseOptions = options => {
+    const result = JSON.parse(options);
+
+    if (result.timeout && (typeof result.timeout === 'string' || result.timeout instanceof String)) {
+        result.timeout = parseInt(result.timeout); //timeout comes as string from conductor, we need a number
+    }
+
+    return result;
+}
+
 exports.conductorHttpParamsToNodejsHttpParams = conductorHttpParamsToNodejsHttpParams;
 exports.createLogger = createLogger;
 exports.supportedEncodings = supportedEncodings;
@@ -114,3 +124,4 @@ exports.createGrpcResponse = createGrpcResponse;
 exports.getEncoding = getEncoding;
 exports.protoDescriptor = protoDescriptor;
 exports.config = config;
+exports.parseOptions = parseOptions;

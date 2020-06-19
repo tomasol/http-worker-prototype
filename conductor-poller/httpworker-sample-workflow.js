@@ -7,17 +7,21 @@ const conductorClient = new ConductorClient({
 })
 
 const input = {
-    uri: 'https://httpbin.org/post',
-    method: 'POST',
-    headers: {'Content-Type': 'text/html; charset=UTF8'},
-    body: 'some data',
-    timeout: 1000
+    http_request: {
+        uri: 'https://httpbin.org/post',
+        method: 'POST',
+        headers: {'Content-Type': 'text/html; charset=UTF8'},
+        body: 'some data',
+        timeout: 1000
+    }
 };
 
 const input2 = {
-    uri: 'https://postman-echo.com/cookies/set?foo1=bar1&foo2=bar2',
-    method: 'GET',
-    timeout: 1000
+    http_request: {
+        uri: 'https://postman-echo.com/cookies/set?foo1=bar1&foo2=bar2',
+        method: 'GET',
+        timeout: 1000
+    }
 };
 
 // update definitions in conductor and start workflow

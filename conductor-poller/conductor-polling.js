@@ -38,28 +38,28 @@ let registerHttpWorker = () => conductorClient.registerWatcher(
     httpTaskDef.name,
     async (data, updater) => {
         try {
-            logger.verbose(`Received task data type: ${data.taskType} data: ${data.inputData}`);
+            logger.verbose(`Received task data type: ${data.taskType} data: ${JSON.stringify(data.inputData.http_request)}`);
 
             const httpOptions = conductorHttpParamsToNodejsHttpParams(
-                data.inputData.uri,
-                data.inputData.method,
-                data.inputData.body,
-                data.inputData.timeout,
-                data.inputData.verifyCertificate,
-                data.inputData.headers,
-                data.inputData.basicAuth,
-                data.inputData.contentType,
-                data.inputData.cookies,
+                data.inputData.http_request.uri,
+                data.inputData.http_request.method,
+                data.inputData.http_request.body,
+                data.inputData.http_request.timeout,
+                data.inputData.http_request.verifyCertificate,
+                data.inputData.http_request.headers,
+                data.inputData.http_request.basicAuth,
+                data.inputData.http_request.contentType,
+                data.inputData.http_request.cookies,
             );
 
-            sendGrpcRequest(httpOptions, data.inputData.body,
+            sendGrpcRequest(httpOptions, data.inputData.http_request.body,
                 async (err, grpcResponse) => {
                     logger.verbose(`Response from HTTP worker was received with status code: ${grpcResponse.statusCode}`);
                     await updateWorkflowState(data.workflowInstanceId, data.taskId, grpcResponse);
                 });
         } catch (error) {
-            logger.error(`Unable to do HTTP request ${error}`);
-            //TODO error handling ?
+            logger.error(`Unable to do HTTP request because: ${error}. I am failing the task with ID: ${data.taskId} in workflow with ID: ${data.workflowInstanceId}`);
+            updateWorkflowState(data.workflowInstanceId, data.taskId, {status: 'FAILED'});
         }
     },
     {pollingIntervals: 1000, autoAck: true, maxRunner: 1},

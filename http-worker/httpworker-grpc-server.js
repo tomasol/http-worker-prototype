@@ -3,7 +3,7 @@ const http = require('http');
 const https = require('https');
 const setCookie = require('set-cookie-parser');
 
-const {protoDescriptor, config, createLogger, supportedEncodings, createGrpcResponse, getEncoding} = require('../shared/utils');
+const {protoDescriptor, config, createLogger, supportedEncodings, createGrpcResponse, getEncoding, parseOptions} = require('../shared/utils');
 
 const completed = 'COMPLETED', failed = 'FAILED';
 
@@ -62,7 +62,7 @@ let pickLibrary = protocol => 'https:' === protocol ? https : http;
  */
 function executeHttp(workerHttpRequest, grpcCallback) {
     // prepare HTTP request parameters from the data received via the gRPC call
-    const options = JSON.parse(workerHttpRequest.request.requestOptions);
+    const options = parseOptions(workerHttpRequest.request.requestOptions);
 
     let req;
     try{

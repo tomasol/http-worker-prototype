@@ -1,3 +1,3 @@
-const {registerHttpWorker} = require('./httpworker-polling');
+const {registerHttpWorker} = require('./conductor-polling');
 
 registerHttpWorker();
