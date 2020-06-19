@@ -56,7 +56,7 @@ const conductorHttpParamsToNodejsHttpParams = (
     httpOptions['path'] = parsedUrl.pathname + parsedUrl.search;
     httpOptions['insecure'] = !verifyCertificate;
 
-    if (headers) {
+    if (!headers) {
         headers = {};
     }
 
@@ -73,7 +73,7 @@ const conductorHttpParamsToNodejsHttpParams = (
         headers['Authorization'] = auth;
     }
 
-    if (headers) {
+    if (Object.keys(headers).length !== 0) {
         httpOptions['headers'] = headers;
     }
 
