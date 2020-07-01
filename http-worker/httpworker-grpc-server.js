@@ -108,5 +108,6 @@ let getServer = function () {
 }
 
 const routeServer = getServer();
+logger.info(`Starting http-worker on ${config.httpworker_bind_address}`)
 routeServer.bind(config.httpworker_bind_address, grpc.ServerCredentials.createInsecure());
 routeServer.start();
