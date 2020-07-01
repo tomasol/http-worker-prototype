@@ -3,12 +3,12 @@ version: '3'
 services:
   poller:
     build: .
-    command: node /http-worker/conductor-poller/start-conductor-poller.js
+    command: bash -c "node /http-worker/conductor-poller/start-conductor-poller.js"
     depends_on:
       - worker
 
   worker:
     build: .
-    command: node /http-worker/http-worker/httpworker-grpc-server
+    command: bash -c "node /http-worker/http-worker/httpworker-grpc-server"
     ports:
       - "50051:50051"
