@@ -31,30 +31,77 @@ async function updateWorkflowState(workflowInstanceId, taskId, grpcResponse) {
     });
 }
 
+const SECRET_PREFIX = '___SECRET_';
+const SECRET_SUFFIX = '___';
+const SECRET_REGEX = new RegExp(SECRET_PREFIX + '([a-zA-Z0-9]+)' + SECRET_SUFFIX);
+
+function obtainSecret(key) {
+    logger.debug(`obtainSecret ${key}`);
+    return 'val(' + key + ')';
+}
+
+function replaceAll(str, toBeReplaced, newSubstr) {
+    let newStr = str;
+    do {
+        str = newStr;
+        newStr = str.replace(toBeReplaced, newSubstr);
+    } while (str != newStr);
+    return str;
+}
+
+function replaceSecretsInString(str) {
+    let r;
+    while(r = SECRET_REGEX.exec(str)) {
+        const toBeReplaced = r[0];
+        const key = r[1];
+        str = replaceAll(str, toBeReplaced, obtainSecret(key));
+    }
+    return str;
+}
+
+function replaceSecrets(input) {
+    for (const key in input) {
+        const val = input[key];
+        if (typeof val === 'object') {
+            input[key] = replaceSecrets(val);
+        } else if (typeof val === 'string') {
+            input[key] = replaceSecretsInString(val);
+        }
+    }
+    return input;
+}
+
 /**
  * registers polling for the http worker task
  */
 let registerHttpWorker = () => conductorClient.registerWatcher(
     httpTaskDef.name,
     async (data, updater) => {
+        const rawInput = data.inputData.http_request;
+        const input = replaceSecrets(rawInput);
         try {
-            logger.verbose(`Received task data type: ${data.taskType} data: ${JSON.stringify(data.inputData.http_request)}`);
+            logger.verbose(`Received task data type: ${data.taskType} data: ${JSON.stringify(input)}`);
 
             const httpOptions = conductorHttpParamsToNodejsHttpParams(
-                data.inputData.http_request.uri,
-                data.inputData.http_request.method,
-                data.inputData.http_request.body,
-                data.inputData.http_request.timeout,
-                data.inputData.http_request.verifyCertificate,
-                data.inputData.http_request.headers,
-                data.inputData.http_request.basicAuth,
-                data.inputData.http_request.contentType,
-                data.inputData.http_request.cookies,
+                input.uri,
+                input.method,
+                input.body,
+                input.timeout,
+                input.verifyCertificate,
+                input.headers,
+                input.basicAuth,
+                input.contentType,
+                input.cookies,
             );
 
-            sendGrpcRequest(httpOptions, data.inputData.http_request.body,
+            sendGrpcRequest(httpOptions, input.body,
                 async (err, grpcResponse) => {
-                    logger.verbose(`Response from HTTP worker was received with status code: ${grpcResponse.statusCode}`);
+                    if (err != null) {
+                        logger.warn('Error while sending grpc request', err);
+                    }
+                    // TODO handle err
+                    logger.info(`Response from HTTP worker was received with status code: ${grpcResponse.statusCode}`);
+                    logger.debug('Response from HTTP worker was received', grpcResponse);
                     await updateWorkflowState(data.workflowInstanceId, data.taskId, grpcResponse);
                 });
         } catch (error) {

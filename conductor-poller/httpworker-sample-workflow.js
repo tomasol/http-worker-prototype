@@ -11,7 +11,7 @@ const input = {
         uri: 'https://httpbin.org/post',
         method: 'POST',
         headers: {'Content-Type': 'text/html; charset=UTF8'},
-        body: 'some data',
+        body: 'some ___SECRET_key___ data\nAnd another ___SECRET_key2___\n___SECRET_key___',
         timeout: 1000
     }
 };
@@ -29,7 +29,7 @@ conductorClient
     .registerTaskDefs([httpTaskDef])
     .then(() =>
         conductorClient.updateWorkflowDefs([sampleWorkflowDef]).then(() => {
-            conductorClient.startWorkflow(sampleWorkflowDef.name, input2).then(workflow => console.log('workflow started, id: ', workflow.data));
+            conductorClient.startWorkflow(sampleWorkflowDef.name, input).then(workflow => console.log('workflow started, id: ', workflow.data));
         })
     )
     .catch(error => console.dir(error, {depth: 10}))
