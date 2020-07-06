@@ -6,6 +6,10 @@
     "httpworker_bind_address": "0.0.0.0:50051",
     "httpworker_address": "localhost:50051",
     "console_log_level": "debug",
-    "overall_log_level": "debug"
+    "overall_log_level": "debug",
+    "vault" : {
+      "apiVersion": "v1",
+      "endpoint": "http://127.0.0.1:8200"
+    }
   }
 }

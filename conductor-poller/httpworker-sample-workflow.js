@@ -11,7 +11,7 @@ const input = {
         uri: 'https://httpbin.org/post',
         method: 'POST',
         headers: {'Content-Type': 'text/html; charset=UTF8'},
-        body: 'some ___SECRET_key___ data\nAnd another ___SECRET_key2___\n___SECRET_key___',
+        body: 'some ___SECRET_secret/key1:f1___ data\nAnd another ___SECRET_secret/key2:f2___\n___SECRET_secret/key1:f2___ third',
         timeout: 1000
     }
 };

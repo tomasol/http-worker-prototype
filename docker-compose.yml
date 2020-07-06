@@ -12,3 +12,13 @@ services:
     command: bash -c "node /http-worker/http-worker/httpworker-grpc-server"
     ports:
       - "50051:50051"
+
+  vault:
+    image: vault
+    volumes:
+      - $PWD/vault/:/tmp/vault
+    cap_add:
+      - IPC_LOCK
+    command: server -config /tmp/vault/config.hcl
+    ports:
+      - "8200:8200"

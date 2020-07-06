@@ -3,6 +3,7 @@ const {sendGrpcRequest} = require('./grpc-client');
 const {conductorHttpParamsToNodejsHttpParams} = require('../shared/utils');
 const {httpTaskDef} = require('../shared/defs');
 const {createLogger, config} = require('../shared/utils');
+const vault = require('node-vault')(config.vault);
 
 const logger = createLogger('conductor-poller', config.poller_log, config.console_log_level, config.overall_log_level);
 
@@ -32,12 +33,15 @@ async function updateWorkflowState(workflowInstanceId, taskId, grpcResponse) {
 }
 
 const SECRET_PREFIX = '___SECRET_';
+const SECRET_PATH_REGEX = '([a-zA-Z0-9/]+)';
+const SECRET_VAR_FIELD_SEPARATOR = ':';
+const SECRET_FIELD_REGEX = '([a-zA-Z0-9]+)';
 const SECRET_SUFFIX = '___';
-const SECRET_REGEX = new RegExp(SECRET_PREFIX + '([a-zA-Z0-9]+)' + SECRET_SUFFIX);
+const SECRET_REGEX = new RegExp(SECRET_PREFIX + SECRET_PATH_REGEX + SECRET_VAR_FIELD_SEPARATOR + SECRET_FIELD_REGEX + SECRET_SUFFIX);
 
-function obtainSecret(key) {
-    logger.debug(`obtainSecret ${key}`);
-    return 'val(' + key + ')';
+async function obtainSecretFromVault(path, field) {
+    const response = await vault.read(path);
+    return response.data[field];
 }
 
 function replaceAll(str, toBeReplaced, newSubstr) {
@@ -49,23 +53,25 @@ function replaceAll(str, toBeReplaced, newSubstr) {
     return str;
 }
 
-function replaceSecretsInString(str) {
+async function replaceSecretsInString(str) {
     let r;
     while(r = SECRET_REGEX.exec(str)) {
         const toBeReplaced = r[0];
-        const key = r[1];
-        str = replaceAll(str, toBeReplaced, obtainSecret(key));
+        const path = r[1];
+        const field = r[2];
+        const payload = await obtainSecretFromVault(path, field);
+        str = replaceAll(str, toBeReplaced, payload);
     }
     return str;
 }
 
-function replaceSecrets(input) {
+async function replaceSecrets(input) {
     for (const key in input) {
         const val = input[key];
         if (typeof val === 'object') {
-            input[key] = replaceSecrets(val);
+            input[key] = await replaceSecrets(val);
         } else if (typeof val === 'string') {
-            input[key] = replaceSecretsInString(val);
+            input[key] = await replaceSecretsInString(val);
         }
     }
     return input;
@@ -74,13 +80,13 @@ function replaceSecrets(input) {
 /**
  * registers polling for the http worker task
  */
-let registerHttpWorker = () => conductorClient.registerWatcher(
+let registerHttpWorker = async () => conductorClient.registerWatcher(
     httpTaskDef.name,
     async (data, updater) => {
         const rawInput = data.inputData.http_request;
-        const input = replaceSecrets(rawInput);
         try {
-            logger.verbose(`Received task data type: ${data.taskType} data: ${JSON.stringify(input)}`);
+            logger.verbose(`Received task data type: ${data.taskType} data: ${JSON.stringify(rawInput)}`);
+            const input = await replaceSecrets(rawInput);
 
             const httpOptions = conductorHttpParamsToNodejsHttpParams(
                 input.uri,

@@ -7,6 +7,7 @@ const configs = require('../shared/config.json');
 // retrieve config boilerplate
 const environment = process.env.NODE_ENV || 'development';
 const config = configs[environment];
+config.vault.token = process.env.VAULT_TOKEN;
 
 // gRPC boilerplate
 const packageDefinition = protoLoader.loadSync(
