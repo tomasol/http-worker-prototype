@@ -1,8 +1,14 @@
-const {registerHttpWorker} = require('./conductor-polling');
+const {registerTaskDef, registerHttpWorker} = require('./conductor-polling');
 const {createLogger, config} = require('../shared/utils');
+const {httpTaskDef} = require('../shared/defs');
 
 const logger = createLogger('conductor-starter', config.poller_log, config.console_log_level, config.overall_log_level);
 
-logger.info(`Starting polling of Conductor with URL ${config.conductor_url}`)
+async function main() {
+    logger.info(`Registering http taskdef URL ${config.conductor_url}`)
+    await registerTaskDef();
+    logger.info('Starting polling')
+    await registerHttpWorker();
+}
 
-registerHttpWorker();
+main();

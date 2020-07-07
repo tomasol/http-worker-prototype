@@ -32,6 +32,8 @@ async function updateWorkflowState(workflowInstanceId, taskId, grpcResponse) {
     });
 }
 
+// Vault itself does not impose those rules on paths and fields.
+// UI should follow those rules in order to make parsing easy.
 const SECRET_PREFIX = '___SECRET_';
 const SECRET_PATH_REGEX = '([a-zA-Z0-9/]+)';
 const SECRET_VAR_FIELD_SEPARATOR = ':';
@@ -119,4 +121,7 @@ let registerHttpWorker = async () => conductorClient.registerWatcher(
     true
 );
 
+const registerTaskDef = async() => await conductorClient.registerTaskDefs([httpTaskDef]);
+
 exports.registerHttpWorker = registerHttpWorker;
+exports.registerTaskDef = registerTaskDef;
