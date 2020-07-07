@@ -3,22 +3,46 @@ version: '3'
 services:
   poller:
     build: .
+    environment:
+      - NODE_ENV=development-docker
     command: bash -c "node /http-worker/conductor-poller/start-conductor-poller.js"
     depends_on:
       - worker
+    networks:
+      - private
 
   worker:
     build: .
+    environment:
+      - NODE_ENV=development-docker
     command: bash -c "node /http-worker/http-worker/httpworker-grpc-server"
     ports:
       - "50051:50051"
+    networks:
+      - private
 
   vault:
-    image: vault
+    image: vault:1.4.3
     volumes:
-      - $PWD/vault/:/tmp/vault
+      - ./vault/config.json:/vault/config.json
+      - vault_db:/vault/file:rw
     cap_add:
       - IPC_LOCK
-    command: server -config /tmp/vault/config.hcl
+    command: server -config /vault/config.json
     ports:
       - "8200:8200"
+    networks:
+      - private
+      - public
+    environment:
+      - VAULT_DEV_ROOT_TOKEN_ID=myroot
+
+  # TODO agent
+
+networks:
+  public:
+  private:
+    internal: true
+
+volumes:
+  vault_db:
