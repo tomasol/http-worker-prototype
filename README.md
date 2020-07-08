@@ -6,14 +6,13 @@ docker-compose build
 ```
 
 ## Starting conductor
-Assuming there is a compose file:
+Assuming there is a compose file we can use the same prefix `http-worker-prototype`
+to put all containers in the same network:
 ```
 docker-compose -p http-worker-prototype -f docker-compose.conductor.frinx.yaml up -d
 ```
 
 ## Setting up Vault
-Vault must be unsealed and contain some secrets so that the integration test can verify the use case.
-Vault will store the key value database in `vault/db`.
 
 1. Start Vault
 ```sh
@@ -21,40 +20,31 @@ docker-compose up -d vault
 ```
 Logs can be printed out using `docker-compose logs -f vault`
 
-2. Init & Unseal
+2. Switch back to kv v1
+Since we are running dev version of vault, it automatically enables v2 of the
+in memory KV store. Unfortunately nodeJs Vault client does not implement v2 of
+key value store API, tracked [here](https://github.com/kr1sp1n/node-vault/issues/82).
+
 Following steps require `vault` (client) to be available,
 ```sh
 export VAULT_ADDR=http://localhost:8200
+export VAULT_TOKEN=myroot
 vault status
 ```
 however one can use the `vault` container provides:
-`docker-compose exec -e VAULT_ADDR=http://localhost:8200 vault /bin/vault status`
-
-a. Initialize vault
 ```sh
-vault operator init -key-shares=1 -key-threshold=1
-```
-b. Find "Initial Root Token"
-```sh
-export VAULT_TOKEN=s.fVUoDPeyDjBJbZ2GXl9RFZC7
-```
-c. Find "Unseal Key 1" and paste it into next command
-```sh
-vault operator unseal G8rOm5viafSJPoA+zV5zZN0LV5aC4moYSEbexVqNDyQ=
+docker-compose exec -e VAULT_TOKEN=myroot \
+ -e VAULT_ADDR=http://localhost:8200 vault /bin/vault status
 ```
 
-3. Enable secrets store
-```sh
-vault secrets enable -path=secret kv
-```
-Put some testing secrets to KV store
-```sh
-vault kv put secret/key1 f1=1 f2=2
-vault kv put secret/key2 f1=10 f2=20
-```
+Third option is to use [Web UI](http://127.0.0.1:8200/ui/), more info
+in the [docs](https://learn.hashicorp.com/vault/secrets-management/sm-versioned-kv).
 
-Setting up Vault is one-time operation, however Vault must be unsealed
-every time the container starts. To start from scatch delete `vault_db` volume.
+We need to switch `secrets/` store back to v1.
+```sh
+vault secrets disable secret/
+vault secrets enable --version=1 -path=secret kv
+```
 
 ## Starting worker and poller
 Start rest of the docker-compose services
@@ -63,6 +53,8 @@ docker-compose up -d
 ```
 
 ## Testing
+From docker host or `poller` container, run
 ```sh
-node conductor-poller/httpworker-sample-workflow.js
+VAULT_TOKEN=myroot node conductor-poller/httpworker-sample-workflow.js
 ```
+Last line should read `All OK`.

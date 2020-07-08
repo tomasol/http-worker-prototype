@@ -1,14 +1,11 @@
 FROM node:12 as http-worker
+RUN npm install -g nodemon
 
 WORKDIR /http-worker
-
-# install grpc
-#RUN apt-get update
-#RUN apt-get -y install grpc
-
-
-COPY . .
+COPY conductor-poller/ conductor-poller
+COPY http-worker/ http-worker
+COPY shared/ shared
+COPY package.json .
+COPY package-lock.json .
 RUN npm install
-RUN npm rebuild
-CMD ["node","http-worker/httpworker-grpc-server"]
 

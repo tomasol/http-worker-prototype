@@ -1,0 +1,23 @@
+version: '3'
+
+services:
+  poller:
+    command: nodemon /http-worker/conductor-poller/start-conductor-poller.js
+    networks:
+      - private
+      - public
+    volumes:
+      - .:/http-worker
+    environment:
+      - NODE_ENV=development-docker
+      - VAULT_TOKEN=myroot
+
+  worker:
+    environment:
+      - NODE_ENV=development-docker
+    command: nodemon /http-worker/http-worker/httpworker-grpc-server
+    networks:
+      - private
+      - public
+    volumes:
+      - .:/http-worker

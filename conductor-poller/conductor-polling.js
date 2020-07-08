@@ -32,6 +32,14 @@ async function updateWorkflowState(workflowInstanceId, taskId, grpcResponse) {
     });
 }
 
+async function markWorkflowFailed(workflowInstanceId, taskId) {
+    await conductorClient.updateTask({
+        workflowInstanceId: workflowInstanceId,
+        taskId: taskId,
+        status: 'FAILED',
+    });
+}
+
 // Vault itself does not impose those rules on paths and fields.
 // UI should follow those rules in order to make parsing easy.
 const SECRET_PREFIX = '___SECRET_';
@@ -42,8 +50,13 @@ const SECRET_SUFFIX = '___';
 const SECRET_REGEX = new RegExp(SECRET_PREFIX + SECRET_PATH_REGEX + SECRET_VAR_FIELD_SEPARATOR + SECRET_FIELD_REGEX + SECRET_SUFFIX);
 
 async function obtainSecretFromVault(path, field) {
-    const response = await vault.read(path);
-    return response.data[field];
+    try {
+        const response = await vault.read(path);
+        return response.data[field];
+    } catch (error) {
+        logger.warn(`Cannot obtain secret: ${error}, path '${path}' field '${field}'`);
+        throw new Error('Cannot obtain secret');
+    }
 }
 
 function replaceAll(str, toBeReplaced, newSubstr) {
@@ -89,7 +102,6 @@ let registerHttpWorker = async () => conductorClient.registerWatcher(
         try {
             logger.verbose(`Received task data type: ${data.taskType} data: ${JSON.stringify(rawInput)}`);
             const input = await replaceSecrets(rawInput);
-
             const httpOptions = conductorHttpParamsToNodejsHttpParams(
                 input.uri,
                 input.method,
@@ -106,15 +118,16 @@ let registerHttpWorker = async () => conductorClient.registerWatcher(
                 async (err, grpcResponse) => {
                     if (err != null) {
                         logger.warn('Error while sending grpc request', err);
+                        await markWorkflowFailed(data.workflowInstanceId, data.taskId);
+                    } else {
+                        logger.info(`Response from HTTP worker was received with status code: ${grpcResponse.statusCode}`);
+                        logger.debug('Response from HTTP worker was received', grpcResponse);
+                        await updateWorkflowState(data.workflowInstanceId, data.taskId, grpcResponse);
                     }
-                    // TODO handle err
-                    logger.info(`Response from HTTP worker was received with status code: ${grpcResponse.statusCode}`);
-                    logger.debug('Response from HTTP worker was received', grpcResponse);
-                    await updateWorkflowState(data.workflowInstanceId, data.taskId, grpcResponse);
                 });
         } catch (error) {
             logger.error(`Unable to do HTTP request because: ${error}. I am failing the task with ID: ${data.taskId} in workflow with ID: ${data.workflowInstanceId}`);
-            updateWorkflowState(data.workflowInstanceId, data.taskId, {status: 'FAILED'});
+            await markWorkflowFailed(data.workflowInstanceId, data.taskId);
         }
     },
     {pollingIntervals: 1000, autoAck: true, maxRunner: 1},

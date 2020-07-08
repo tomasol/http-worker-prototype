@@ -5,6 +5,7 @@ services:
     build: .
     environment:
       - NODE_ENV=development-docker
+      - VAULT_TOKEN=myroot
     command: bash -c "node /http-worker/conductor-poller/start-conductor-poller.js"
     depends_on:
       - worker
@@ -15,6 +16,7 @@ services:
     build: .
     environment:
       - NODE_ENV=development-docker
+      - VAULT_TOKEN=myroot
     command: bash -c "node /http-worker/http-worker/httpworker-grpc-server"
     ports:
       - "50051:50051"
@@ -23,12 +25,8 @@ services:
 
   vault:
     image: vault:1.4.3
-    volumes:
-      - ./vault/config.json:/vault/config.json
-      - vault_db:/vault/file:rw
     cap_add:
       - IPC_LOCK
-    command: server -config /vault/config.json
     ports:
       - "8200:8200"
     networks:
@@ -37,12 +35,7 @@ services:
     environment:
       - VAULT_DEV_ROOT_TOKEN_ID=myroot
 
-  # TODO agent
-
 networks:
   public:
   private:
     internal: true
-
-volumes:
-  vault_db:
