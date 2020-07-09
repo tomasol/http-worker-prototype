@@ -39,6 +39,7 @@ async function main() {
     console.log('Writing sample data to Vault');
     await vault.write('secret/key1', {f1:1, f2:2});
     await vault.write('secret/key2', {f1:10, f2:20});
+    console.log('Sending workflow to Conductor');
     await conductorClient.updateWorkflowDefs([sampleWorkflowDef]);
     const workflowId = (await conductorClient.startWorkflow(sampleWorkflowDef.name, input)).data;
     console.log('workflow started, id: ', workflowId);

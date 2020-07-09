@@ -1,7 +1,7 @@
 # http-worker-prototype
 
 ## Building docker images
-```
+```sh
 docker-compose build
 ```
 
@@ -58,3 +58,8 @@ From docker host or `poller` container, run
 VAULT_TOKEN=myroot node conductor-poller/httpworker-sample-workflow.js
 ```
 Last line should read `All OK`.
+
+
+## Note about reconnect
+Current behavior is that failure to comunicate with Conductor results in
+shutdown of the process. Orchestrator must restart the process.

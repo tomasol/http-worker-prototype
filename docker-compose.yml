@@ -2,26 +2,31 @@ version: '3'
 
 services:
   poller:
-    build: .
+    build:
+      context: .
+      dockerfile: poller.Dockerfile
     environment:
       - NODE_ENV=development-docker
       - VAULT_TOKEN=myroot
-    command: bash -c "node /http-worker/conductor-poller/start-conductor-poller.js"
     depends_on:
       - worker
     networks:
       - private
+    restart: on-failure
 
   worker:
-    build: .
+    build:
+      context: .
+      dockerfile: worker.Dockerfile
     environment:
       - NODE_ENV=development-docker
-      - VAULT_TOKEN=myroot
-    command: bash -c "node /http-worker/http-worker/httpworker-grpc-server"
     ports:
       - "50051:50051"
     networks:
       - private
+      # needs to be able to access internet
+      - public
+    restart: on-failure
 
   vault:
     image: vault:1.4.3
