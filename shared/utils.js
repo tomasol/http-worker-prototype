@@ -9,6 +9,7 @@ const environment = process.env.NODE_ENV || 'development';
 const config = configs[environment];
 config.vault.token = process.env.VAULT_TOKEN;
 config.vault.endpoint = process.env.VAULT_ADDR || config.vault.endpoint;
+config.vault.pathPrefix = process.env.VAULT_PATH_PREFIX || config.vault.pathPrefix || '';
 
 // gRPC boilerplate
 const packageDefinition = protoLoader.loadSync(

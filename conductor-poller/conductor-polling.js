@@ -9,7 +9,7 @@ const logger = createLogger('conductor-poller', config.poller_log, config.consol
 
 const conductorClient = new ConductorClient({
     baseURL: config.conductor_url
-})
+});
 
 /**
  * Updates the conductor with results
@@ -51,7 +51,7 @@ const SECRET_REGEX = new RegExp(SECRET_PREFIX + SECRET_PATH_REGEX + SECRET_VAR_F
 
 async function obtainSecretFromVault(path, field) {
     try {
-        const response = await vault.read(path);
+        const response = await vault.read(config.vault.pathPrefix + path);
         return response.data[field];
     } catch (error) {
         logger.warn(`Cannot obtain secret: ${error}, path '${path}' field '${field}'`);

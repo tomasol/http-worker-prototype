@@ -72,7 +72,13 @@ shutdown of the process. Orchestrator must restart the process.
 
 ## Note about kv store v2
 It is possible to use the `node-vault` library to read the secrets
-from v2 keystore by prepending `data/` to the path.
+from v2 keystore by prepending `data/` to the path. Poller can insert this prefix
+automatically to each Vault request. Configuration can be set via environemt variable:
+```sh
+export VAULT_PATH_PREFIX='data/'
+```
+
+or via `config.json` with path `vault.pathPrefix`.
 
 # Vault Agent
 Vault Agent is a 'sidecar' process which does auth and token renewal & rotation. This is not handled in poller app.
