@@ -8,6 +8,7 @@ const configs = require('../shared/config.json');
 const environment = process.env.NODE_ENV || 'development';
 const config = configs[environment];
 config.vault.token = process.env.VAULT_TOKEN;
+config.vault.endpoint = process.env.VAULT_ADDR || config.vault.endpoint;
 
 // gRPC boilerplate
 const packageDefinition = protoLoader.loadSync(
