@@ -89,13 +89,19 @@ forward it instead of the locally maintained one.
 For simplicity's sake we are enabling JWT auth in Vault. This demonstrates using the login API and token handling
 by Vault Agent.
 
-Enable jwt authentication at path `/jwt`:
+1. Generate RSA keypair:
+```sh
+openssl genrsa -out vault/private.pem 2048
+openssl rsa -in vault/private.pem -outform PEM -pubout -out vault/pubkey.pem
+
+```
+
+2. Enable jwt authentication at path `/jwt`:
 ```sh
 vault auth enable jwt
 ```
 
-Create named role `dev-role`:
-
+3. Create named role `dev-role`:
 ```sh
 vault write auth/jwt/role/dev-role \
     role_type="jwt" \
@@ -108,7 +114,9 @@ vault write auth/jwt/role/dev-role \
 See `vault/agent.hcl` for configuration of the role.
 
 Note that those settings are for development only and should not be used in production!
-We are using `default` policy here. Add following to the policy to allow reading all secrets:
+We are using `default` policy here.
+
+4. Add following to the policy to allow reading all secrets:
 ```sh
 echo '
 # Allow reading all secrets - FOR TESTING ONLY
@@ -122,7 +130,13 @@ vault policy write default default.policy
 rm default.policy
 ```
 
-Generate jwt token using [jwt.io](https://jwt.io) with method RS256,
+5. Configure Vault to trust the generated public key for JWT auth
+```sh
+vault write auth/jwt/config jwt_validation_pubkeys=@vault/pubkey.pem
+```
+
+6. Generate JWT
+Generate JWT token using [jwt.io](https://jwt.io) with method RS256,
 payload:
 ```json
 {
@@ -132,8 +146,12 @@ payload:
   "exp": 1716239022
 }
 ```
-Put the result in the `JWT` variable.
+Put the result in the `JWT` variable, e.g.:
+```sh
+JWT='eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwiYXVkIjoibXlhdWQiLCJpYXQiOjE1MTYyMzkwMjIsImV4cCI6MTcxNjIzOTAyMn0.wJtm7RBUC27x4CHVwonu5rRTJEsxSiBPWo9Mv46texkvlNGTto9_cOdb7AuSgEujY1uBphwvo8v_6fJg3LjtraxNZRA5xgAgPGGv9T3VbEnwSM8l3tE_XaoXVdyCZa1AGXbewgoOmOkYsYECKU9i2jJWzASy_8KZaQwcM3hkdBrp02-H49QDumFvq4VhdqwLpiSRDvmTHpGEU_FUL-Q1JIgVRypwAu9pI3e3NPC3wn4HHAbD8VRhrBs2nyo3706I_AXpF_NgFrAQ9_PvZYBf7CtHk6UjR3tLVKq_YGxHzkKUHLh2hPaipJ7I_W9n7OLbM1vuf5txbaCrPHG3-KR6NQ'
+```
 
+7. Verify JWT Auth
 To check that everything is working, login to Vault:
 ```sh
 vault write auth/jwt/login role=dev-role jwt=$JWT
@@ -152,7 +170,7 @@ policies             ["default"]
 token_meta_role      dev-role
 ```
 
-If the command succeds, run Vault Agent:
+8. Run Vault Agent
 
 ```sh
 # this file will be deleted by Vault Agent immediately
@@ -164,10 +182,15 @@ Check that you can get the secrets from agent without any token:
 VAULT_ADDR=http://localhost:8201 vault kv get secret/key1
 ```
 
-### Starting poller connected to the Vault Agent
+9. Start poller connected to the Vault Agent
+
+If poller is running in docker, stop it.
+```sh
+docker-compose up -d --scale poller=0
+```
 To start poller locally, run
 ```sh
-VAULT_ADDR=http://localhost:8201 node conductor-poller/start-conductor-poller.js
+VAULT_ADDR=http://localhost:8201 VAULT_TOKEN= node conductor-poller/start-conductor-poller.js
 ```
 Run the test mentioned above, it should succeed when Vault Agent is up.
 
